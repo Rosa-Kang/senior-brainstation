@@ -1,0 +1,13 @@
+# 환경변수 (절대 Git에 올리지 않음)
+.env
+.env.local
+.env.*
+
+# Netlify 빌드 결과물
+.netlify/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
