@@ -2411,29 +2411,27 @@
         </div>
       `;
       
-      // 캐시 유효 조건: 오늘 날짜 + AI 생성 질문(ai_ 접두사)까지 확인
-      // 정적 풀 질문이 들어있는 구버전 캐시는 무효화 → Claude로 재생성
+      // 캐시 유효 조건: 오늘 날짜 + 뉴스/질문 존재 여부만 확인
+      // AI 질문 여부는 체크 안 함 — Claude 실패 시 정적 질문도 당일 캐시로 인정
       const cacheValid = state.cachedNewsDate === todayStr
         && state.cachedNews
         && state.cachedNews.length > 0
-        && state.cachedNews[0]?.questions?.length > 0
-        && state.cachedNews[0]?.questions[0]?.id?.startsWith('ai_');  // ← AI 생성인지 확인
+        && state.cachedNews[0]?.questions?.length > 0;
 
       console.log('📖 [언어영역] 캐시 검사:', {
         dateMatch: state.cachedNewsDate === todayStr,
         hasCache: !!state.cachedNews,
         hasQuestions: !!state.cachedNews?.[0]?.questions,
-        isAI: state.cachedNews?.[0]?.questions?.[0]?.id?.startsWith('ai_'),
         firstQId: state.cachedNews?.[0]?.questions?.[0]?.id,
         cacheValid
       });
 
       let newsItems;
       if (cacheValid) {
-        console.log('✅ 캐시 사용 (AI 질문 포함) — fetchTodaysNews 건너뜀');
+        console.log('✅ 캐시 사용 — fetchTodaysNews 건너뜀');
         newsItems = state.cachedNews;
       } else {
-        console.log('🔄 캐시 없음 또는 AI 질문 없음 — fetchTodaysNews 호출');
+        console.log('🔄 캐시 없음 — fetchTodaysNews 호출');
         try {
           newsItems = await fetchTodaysNews();
           state.cachedNews = newsItems;
