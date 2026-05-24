@@ -1510,16 +1510,29 @@
     // 한국 뉴스 사이트들이 해외 IP를 차단하므로 전용 뉴스 API 사용
     // 무료: 하루 100건 (우리 앱은 하루 3건만 사용)
     // 키 변경 시: ⚙️ 설정 → GNews API 키
+    // ── 기사 원문 추출 (Jina AI Reader 경유) ──────────────────────────
+    async function fetchArticleContent(url) {
+      try {
+        const res = await fetch(
+          `/.netlify/functions/fetch-article?url=${encodeURIComponent(url)}`,
+          { signal: AbortSignal.timeout(12000) }
+        );
+        const data = await res.json();
+        return data.content || '';
+      } catch {
+        return '';
+      }
+    }
+
     // ── Claude API: 기사별 맞춤 시사 문제 생성 (Netlify Function 경유) ──
-    async function generateQuestionsForArticle(title, summary, categoryLabel) {
-      console.log(`🤖 [Claude] generateQuestionsForArticle 호출: ${categoryLabel} — "${title.substring(0, 40)}"`);
+    async function generateQuestionsForArticle(title, summary, categoryLabel, articleContent = '') {
+      console.log(`🤖 [Claude] generateQuestionsForArticle 호출: ${categoryLabel} — "${title.substring(0, 40)}" | 원문 ${articleContent.length}자`);
 
       const res = await fetch('/.netlify/functions/claude', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, summary, categoryLabel })
+        body: JSON.stringify({ title, summary, categoryLabel, articleContent })
       });
-
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
         console.error(`❌ Claude API ${res.status}:`, JSON.stringify(errBody));
@@ -1615,7 +1628,18 @@
         }
       }
       
-      // Step 2: Claude 병렬 질문 생성 (GNews rate limit 없음)
+      // Step 2: 기사 원문 병렬 추출
+      console.log('[fetch-article] 기사 원문 추출 중...');
+      await Promise.all(articles.map(async (article) => {
+        if (article.ok && article.link) {
+          article.articleContent = await fetchArticleContent(article.link);
+          console.log(`📄 [${article.categoryLabel}] 원문 ${article.articleContent.length}자`);
+        } else {
+          article.articleContent = '';
+        }
+      }));
+
+      // Step 3: Claude 병렬 질문 생성 (GNews rate limit 없음)
       console.log('[Claude] 기사별 맞춤 질문 생성 중...');
       await Promise.all(articles.map(async (article) => {
         if (article.ok && !article.isFallback && article.title) {
@@ -1623,7 +1647,8 @@
             article.questions = await generateQuestionsForArticle(
               article.title,
               article.summary,
-              article.categoryLabel
+              article.categoryLabel,
+              article.articleContent || ''
             );
             console.log(`✅ [Claude] ${article.categoryLabel} 질문 생성 완료 | id 예시: ${article.questions[0]?.id}`);
             console.log('생성된 질문 1:', article.questions[0]?.text);
