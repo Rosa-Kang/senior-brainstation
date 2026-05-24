@@ -1512,21 +1512,29 @@
     // 키 변경 시: ⚙️ 설정 → GNews API 키
     // ── 기사 원문 추출 (Jina AI Reader 경유) ──────────────────────────
     async function fetchArticleContent(url) {
+      console.log(`📡 [fetch-article] 요청 URL: ${url}`);
       try {
         const res = await fetch(
           `/.netlify/functions/fetch-article?url=${encodeURIComponent(url)}`,
           { signal: AbortSignal.timeout(12000) }
         );
         const data = await res.json();
-        return data.content || '';
-      } catch {
+        const content = data.content || '';
+        console.log(`📡 [fetch-article] 응답: ${content.length}자 | 앞 200자:\n${content.substring(0, 200)}`);
+        return content;
+      } catch (e) {
+        console.warn(`📡 [fetch-article] 실패:`, e.message);
         return '';
       }
     }
 
     // ── Claude API: 기사별 맞춤 시사 문제 생성 (Netlify Function 경유) ──
     async function generateQuestionsForArticle(title, summary, categoryLabel, articleContent = '') {
-      console.log(`🤖 [Claude] generateQuestionsForArticle 호출: ${categoryLabel} — "${title.substring(0, 40)}" | 원문 ${articleContent.length}자`);
+      const hasContent = articleContent.length > 0;
+      console.group(`🤖 [Claude] ${categoryLabel} 질문 생성`);
+      console.log('제목:', title);
+      console.log('원문 길이:', articleContent.length + '자', hasContent ? '(원문 기반 출제)' : '(요약 기반 출제)');
+      if (hasContent) console.log('원문 앞 300자:', articleContent.substring(0, 300));
 
       const res = await fetch('/.netlify/functions/claude', {
         method: 'POST',
@@ -1535,18 +1543,41 @@
       });
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        console.error(`❌ Claude API ${res.status}:`, JSON.stringify(errBody));
+        console.error(`❌ Claude ${res.status}:`, errBody?.error?.message || JSON.stringify(errBody));
+        console.groupEnd();
         throw new Error(`Claude HTTP ${res.status}: ${errBody?.error?.message || ''}`);
       }
       const data = await res.json();
       const raw = data.content?.[0]?.text || '';
       const clean = raw.replace(/```json\n?|```/g, '').trim();
       const questions = JSON.parse(clean);
+      console.log('생성된 질문 1:', questions[0]?.text);
+      console.log('생성된 질문 2:', questions[1]?.text);
+      console.groupEnd();
       return questions.map((q, i) => ({
         ...q,
         id: `ai_${Date.now()}_${i}`
       }));
     }
+
+    // 브라우저 콘솔에서 window.testPipeline(url) 로 단독 테스트 가능
+    window.testPipeline = async function(url) {
+      console.group('🧪 파이프라인 단독 테스트');
+      console.log('1. fetch-article 테스트...');
+      const content = await fetchArticleContent(url);
+      console.log(`fetch-article 결과: ${content.length}자`);
+      if (content.length > 0) {
+        console.log('2. Claude 질문 생성 테스트...');
+        const questions = await generateQuestionsForArticle(
+          '테스트 기사 제목', content.substring(0, 500), '테스트', content
+        );
+        console.log('생성된 질문들:', questions);
+      } else {
+        console.warn('원문 추출 실패 — Claude 테스트 건너뜀');
+      }
+      console.groupEnd();
+      return content.length;
+    };
     
     // GNews API로 카테고리별 최신 한국 뉴스 1건 fetch
     async function fetchFromGNews(categoryKey) {
