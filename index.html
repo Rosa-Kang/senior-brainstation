@@ -1964,7 +1964,16 @@
     function genComparison(seed) {
       const rng = seedRandom(seed + 2000);
       const names = ['민수', '영희', '철수', '지영', '동현', '수진', '하늘', '재호', '소영', '준호', '미영', '태호', '은지', '성민'];
-      const props = ['키', '나이', '점수', '몸무게', '독서량', '속도', '힘', '달리기 실력'];
+      const props = [
+        { name: '키',          particle: '가', verb: '큽니다',    adj: '큰' },
+        { name: '나이',        particle: '가', verb: '많습니다',  adj: '많은' },
+        { name: '점수',        particle: '가', verb: '높습니다',  adj: '높은' },
+        { name: '몸무게',      particle: '가', verb: '많습니다',  adj: '많은' },
+        { name: '독서량',      particle: '이', verb: '많습니다',  adj: '많은' },
+        { name: '속도',        particle: '가', verb: '빠릅니다',  adj: '빠른' },
+        { name: '힘',          particle: '이', verb: '셉니다',    adj: '센' },
+        { name: '달리기 실력', particle: '이', verb: '좋습니다',  adj: '좋은' },
+      ];
 
       const [A, B, C] = [...names].sort(() => rng() - 0.5).slice(0, 3);
       const prop = pickRandom(props, rng);
@@ -1973,10 +1982,10 @@
         id: `auto_cmp_${seed}`,
         cat: '논리',
         diff: 'easy',
-        q: `${A}는 ${B}보다 ${prop}가 큽니다. ${B}는 ${C}보다 ${prop}가 큽니다. 가장 ${prop}가 큰 사람은?`,
+        q: `${A}는 ${B}보다 ${prop.name}${prop.particle} ${prop.verb}. ${B}는 ${C}보다 ${prop.name}${prop.particle} ${prop.verb}. 가장 ${prop.name}${prop.particle} ${prop.adj} 사람은?`,
         opts: shuffled,
         correct: shuffled.indexOf(A),
-        exp: `${A} > ${B} > ${C}이므로 가장 ${prop}가 큰 사람은 ${A}입니다`,
+        exp: `${A} > ${B} > ${C}이므로 가장 ${prop.name}${prop.particle} ${prop.adj} 사람은 ${A}입니다`,
         isAuto: true
       };
     }
@@ -2950,13 +2959,21 @@
     
     function renderBrainPage(container) {
       const dayProgress = getDayProgress(state.currentDay);
-      
+      const bothDone = dayProgress.memory.attempted && dayProgress.perception.attempted;
+
       container.innerHTML = `
         <div class="page-header">
           <h1 class="page-title">🧠 뇌 훈련</h1>
           <p class="page-subtitle">기억력과 관찰력을 함께 길러요</p>
         </div>
-        
+
+        ${bothDone ? `
+          <div class="complete-banner">
+            <div class="complete-banner-icon">✅</div>
+            <div class="complete-banner-text">오늘의 뇌 훈련을 완료했습니다!<br>내일 새로운 문제로 만나요.</div>
+          </div>
+        ` : ''}
+
         <div class="card">
           <span class="card-badge">기억력 게임</span>
           <h2 class="card-title">🎯 숫자 기억하기</h2>
@@ -2964,7 +2981,7 @@
             ${renderMemoryGame()}
           </div>
         </div>
-        
+
         <div class="card">
           <span class="card-badge">관찰력 게임</span>
           <h2 class="card-title">👁 다른 글자 찾기</h2>
@@ -2979,12 +2996,15 @@
       const dayProgress = getDayProgress(state.currentDay);
       
       if (dayProgress.memory.attempted) {
+        const game = getTodaysMemoryGame();
         return `
           <div class="game-container">
-            <div class="game-instruction">오늘의 기억력 게임을 완료했습니다!</div>
-            <div style="font-size: 48px; margin: 20px 0;">${dayProgress.memory.success ? '🎉' : '💪'}</div>
-            <div style="color: ${dayProgress.memory.success ? '#16a34a' : '#dc2626'}; font-weight: 600;">
-              ${dayProgress.memory.success ? '성공!' : '아쉽지만 내일 다시!'}
+            <p class="game-instruction">오늘의 숫자</p>
+            <div class="number-display">
+              ${game.numbers.map(n => `<div class="number-cell">${n}</div>`).join('')}
+            </div>
+            <div style="font-size: 18px; font-weight: 700; color: ${dayProgress.memory.success ? '#16a34a' : '#dc2626'}; margin-top: 16px;">
+              ${dayProgress.memory.success ? '✅ 성공!' : '💪 아쉽지만 내일 다시!'}
             </div>
           </div>
         `;
@@ -3142,10 +3162,18 @@
       const dayProgress = getDayProgress(state.currentDay);
       
       if (dayProgress.perception.attempted) {
+        const game = getTodaysPerceptionGame();
         return `
           <div class="game-container">
-            <div class="game-instruction">오늘의 관찰력 게임을 완료했습니다!</div>
-            <div style="font-size: 48px; margin: 20px 0;">${dayProgress.perception.success ? '🎉' : '💪'}</div>
+            <p class="game-instruction">${game.instruction}</p>
+            <div class="difference-game">
+              <div class="difference-box">${game.line1}</div>
+              <div class="difference-box">${game.line2}</div>
+            </div>
+            <div style="font-size: 14px; color: #5d4e9e; margin-top: 12px;">정답: <strong>${game.expectedDiff}</strong></div>
+            <div style="font-size: 18px; font-weight: 700; color: ${dayProgress.perception.success ? '#16a34a' : '#dc2626'}; margin-top: 12px;">
+              ${dayProgress.perception.success ? '✅ 정답!' : '💪 아쉽지만 내일 다시!'}
+            </div>
           </div>
         `;
       }
