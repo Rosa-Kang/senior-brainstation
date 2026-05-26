@@ -1908,31 +1908,29 @@
       return arr[Math.floor(rng() * arr.length)];
     }
 
-    // ----- 등차수열 자동 생성 -----
+    // ----- 등차수열 자동 생성 (증가/감소) -----
     function genArithmetic(seed) {
       const rng = seedRandom(seed);
-      const start = Math.floor(rng() * 20) + 1;
-      const diff = Math.floor(rng() * 8) + 2;
-      const seq = [start, start + diff, start + diff*2, start + diff*3];
-      const correct = start + diff*4;
-  
-      // 오답은 정답 ±1, ±diff 등으로 만듦
-      const distractors = [correct - diff, correct + diff, correct + 1].filter((v, i, a) => a.indexOf(v) === i && v !== correct).slice(0, 3);
-      while (distractors.length < 3) distractors.push(correct + distractors.length + 5);
-  
-      const allOptions = [correct, ...distractors];
-      // 옵션 위치를 시드에 따라 결정론적으로 섞기
-      const shuffled = [...allOptions].sort(() => rng() - 0.5);
-      const correctIdx = shuffled.indexOf(correct);
-  
+      const start = Math.floor(rng() * 40) + 5;
+      const step = Math.floor(rng() * 10) + 2;
+      const decreasing = rng() > 0.5;
+      const d = decreasing ? -step : step;
+      const seq = [start, start + d, start + d*2, start + d*3];
+      const correct = start + d*4;
+
+      const distractors = [correct - step, correct + step, correct + d*2]
+        .filter((v, i, a) => a.indexOf(v) === i && v !== correct).slice(0, 3);
+      while (distractors.length < 3) distractors.push(correct + distractors.length * (decreasing ? -3 : 5));
+
+      const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
       return {
         id: `auto_arith_${seed}`,
         cat: '수열',
         diff: 'easy',
         q: `${seq.join(', ')}, ?`,
         opts: shuffled.map(String),
-        correct: correctIdx,
-        exp: `각 숫자는 ${diff}씩 증가하는 등차수열입니다. ${seq[3]} + ${diff} = ${correct}`,
+        correct: shuffled.indexOf(correct),
+        exp: `각 숫자는 ${step}씩 ${decreasing ? '감소' : '증가'}하는 등차수열입니다. ${seq[3]} ${decreasing ? '-' : '+'} ${step} = ${correct}`,
         isAuto: true
       };
     }
@@ -1940,25 +1938,23 @@
     // ----- 등비수열 자동 생성 -----
     function genGeometric(seed) {
       const rng = seedRandom(seed + 1000);
-      const start = Math.floor(rng() * 4) + 2;  // 2~5
-      const ratio = Math.floor(rng() * 3) + 2;  // 2~4
-      const seq = [start, start * ratio, start * ratio * ratio, start * ratio * ratio * ratio];
-      const correct = start * Math.pow(ratio, 4);
-  
-      const distractors = [correct - ratio, correct + ratio, correct * 2].filter(v => v !== correct).slice(0, 3);
-      while (distractors.length < 3) distractors.push(correct + distractors.length * 7);
-  
-      const allOptions = [correct, ...distractors];
-      const shuffled = [...allOptions].sort(() => rng() - 0.5);
-      const correctIdx = shuffled.indexOf(correct);
-  
+      const start = Math.floor(rng() * 6) + 2;
+      const ratio = Math.floor(rng() * 4) + 2;
+      const seq = [start, start * ratio, start * ratio ** 2, start * ratio ** 3];
+      const correct = start * ratio ** 4;
+
+      const distractors = [correct - ratio * 2, correct + ratio, correct * 2]
+        .filter(v => v > 0 && v !== correct).slice(0, 3);
+      while (distractors.length < 3) distractors.push(correct + distractors.length * 11);
+
+      const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
       return {
         id: `auto_geo_${seed}`,
         cat: '수열',
         diff: 'medium',
         q: `${seq.join(', ')}, ?`,
         opts: shuffled.map(String),
-        correct: correctIdx,
+        correct: shuffled.indexOf(correct),
         exp: `각 숫자는 ${ratio}배씩 증가하는 등비수열입니다. ${seq[3]} × ${ratio} = ${correct}`,
         isAuto: true
       };
@@ -1967,29 +1963,25 @@
     // ----- 비교 논리 자동 생성 -----
     function genComparison(seed) {
       const rng = seedRandom(seed + 2000);
-      const names = ['민수', '영희', '철수', '지영', '동현', '수진', '하늘', '재호', '소영', '준호'];
-      const props = ['키', '나이', '점수', '몸무게', '독서량'];
-  
-      const shuffledNames = [...names].sort(() => rng() - 0.5);
-      const [A, B, C] = shuffledNames.slice(0, 3);
+      const names = ['민수', '영희', '철수', '지영', '동현', '수진', '하늘', '재호', '소영', '준호', '미영', '태호', '은지', '성민'];
+      const props = ['키', '나이', '점수', '몸무게', '독서량', '속도', '힘', '달리기 실력'];
+
+      const [A, B, C] = [...names].sort(() => rng() - 0.5).slice(0, 3);
       const prop = pickRandom(props, rng);
-      const optsRaw = [A, B, C, '알 수 없다'];
-      const shuffled = [...optsRaw].sort(() => rng() - 0.5);
-      const correctIdx = shuffled.indexOf(A);
-  
+      const shuffled = [A, B, C, '알 수 없다'].sort(() => rng() - 0.5);
       return {
         id: `auto_cmp_${seed}`,
         cat: '논리',
         diff: 'easy',
         q: `${A}는 ${B}보다 ${prop}가 큽니다. ${B}는 ${C}보다 ${prop}가 큽니다. 가장 ${prop}가 큰 사람은?`,
         opts: shuffled,
-        correct: correctIdx,
+        correct: shuffled.indexOf(A),
         exp: `${A} > ${B} > ${C}이므로 가장 ${prop}가 큰 사람은 ${A}입니다`,
         isAuto: true
       };
     }
 
-    // ----- 시각 패턴 자동 생성 -----
+    // ----- 시각 패턴 자동 생성 (3가지 패턴 유형) -----
     function genVisualPattern(seed) {
       const rng = seedRandom(seed + 3000);
       const symbolSets = [
@@ -1997,60 +1989,214 @@
         ['★', '♥', '◯', '◆'],
         ['↑', '→', '↓', '←'],
         ['🌸', '🌳', '🌊', '🏔'],
-        ['1', '2', '3', '4']
+        ['가', '나', '다', '라'],
+        ['A', 'B', 'C', 'D'],
+        ['봄', '여름', '가을', '겨울'],
+        ['빨강', '파랑', '노랑', '초록'],
       ];
-      const set = pickRandom(symbolSets, rng);
-      const shuffled = [...set].sort(() => rng() - 0.5);
-      const [a, b, c, d] = shuffled;
-  
-      // a b c a b c a ? 패턴 (정답: b)
-      const correct = b;
-      const opts = [a, b, c, d];
-      const shuffledOpts = [...opts].sort(() => rng() - 0.5);
-      const correctIdx = shuffledOpts.indexOf(b);
-  
+      const [a, b, c, d] = [...pickRandom(symbolSets, rng)].sort(() => rng() - 0.5);
+      const patternType = Math.floor(rng() * 3);
+
+      let q, answer, level, exp;
+      if (patternType === 0) {
+        q = `${a} ${b} ${c} ${a} ${b} ${c} ${a} ?`;
+        answer = b; level = 'easy';
+        exp = `${a} ${b} ${c} 가 반복됩니다. ${a} 다음은 ${b}입니다`;
+      } else if (patternType === 1) {
+        q = `${a} ${a} ${b} ${b} ${c} ${c} ${a} ${a} ?`;
+        answer = b; level = 'medium';
+        exp = `두 개씩 같은 것이 반복되는 패턴입니다. 다음은 ${b}`;
+      } else {
+        q = `${a} ${b} ${a} ${b} ${a} ${b} ?`;
+        answer = a; level = 'easy';
+        exp = `${a} ${b} 가 번갈아 반복됩니다. ${b} 다음은 ${a}입니다`;
+      }
+
+      const opts = [a, b, c, d].sort(() => rng() - 0.5);
       return {
         id: `auto_pat_${seed}`,
         cat: '시각패턴',
-        diff: 'easy',
-        q: `${a} ${b} ${c} ${a} ${b} ${c} ${a} ?`,
-        opts: shuffledOpts,
-        correct: correctIdx,
-        exp: `${a} ${b} ${c} 가 반복되는 패턴입니다. ${a} 다음은 ${b}입니다`,
+        diff: level,
+        q, opts,
+        correct: opts.indexOf(answer),
+        exp,
         isAuto: true
       };
     }
 
-    // ----- 실생활 수리 자동 생성 -----
+    // ----- 실생활 수리 자동 생성 (단순구매/거스름돈/할인/나누기) -----
     function genPracticalMath(seed) {
       const rng = seedRandom(seed + 4000);
-      const items = ['사과', '귤', '배', '딸기', '책', '연필', '공책'];
-      const item = pickRandom(items, rng);
-      const price = (Math.floor(rng() * 9) + 1) * 1000;  // 1000~9000
-      const quantity = Math.floor(rng() * 5) + 2;  // 2~6
-      const correct = price * quantity;
-  
-      const distractors = [
-        correct - price,
-        correct + price,
-        price * (quantity + 1)
-      ].filter(v => v !== correct).slice(0, 3);
-      while (distractors.length < 3) distractors.push(correct + distractors.length * 1000);
-  
-      const allOptions = [correct, ...distractors];
-      const shuffled = [...allOptions].sort(() => rng() - 0.5);
-      const correctIdx = shuffled.indexOf(correct);
-  
-      return {
-        id: `auto_prac_${seed}`,
-        cat: '실생활',
-        diff: 'easy',
-        q: `${price.toLocaleString()}원짜리 ${item} ${quantity}개의 가격은?`,
-        opts: shuffled.map(v => v.toLocaleString() + '원'),
-        correct: correctIdx,
-        exp: `${price.toLocaleString()}원 × ${quantity}개 = ${correct.toLocaleString()}원`,
-        isAuto: true
-      };
+      const type = Math.floor(rng() * 4);
+
+      if (type === 0) {
+        const items = ['사과', '귤', '배', '딸기', '책', '연필', '공책', '우유', '빵', '달걀'];
+        const item = pickRandom(items, rng);
+        const price = (Math.floor(rng() * 9) + 1) * 1000;
+        const qty = Math.floor(rng() * 5) + 2;
+        const correct = price * qty;
+        const distractors = [correct - price, correct + price, price * (qty + 1)].filter(v => v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct + distractors.length * 1000);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_prac_${seed}`, cat: '실생활', diff: 'easy',
+          q: `${price.toLocaleString()}원짜리 ${item} ${qty}개의 가격은?`,
+          opts: shuffled.map(v => v.toLocaleString() + '원'),
+          correct: shuffled.indexOf(correct),
+          exp: `${price.toLocaleString()} × ${qty} = ${correct.toLocaleString()}원`,
+          isAuto: true
+        };
+      } else if (type === 1) {
+        const paid = (Math.floor(rng() * 5) + 1) * 10000;
+        const price = paid - (Math.floor(rng() * 8) + 1) * 1000;
+        const change = paid - price;
+        const distractors = [change - 1000, change + 1000, paid - change].filter(v => v > 0 && v !== change).slice(0, 3);
+        while (distractors.length < 3) distractors.push(change + distractors.length * 500);
+        const shuffled = [change, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_prac_${seed}`, cat: '실생활', diff: 'easy',
+          q: `${paid.toLocaleString()}원을 내고 ${price.toLocaleString()}원짜리를 샀을 때 거스름돈은?`,
+          opts: shuffled.map(v => v.toLocaleString() + '원'),
+          correct: shuffled.indexOf(change),
+          exp: `${paid.toLocaleString()} - ${price.toLocaleString()} = ${change.toLocaleString()}원`,
+          isAuto: true
+        };
+      } else if (type === 2) {
+        const origPrice = (Math.floor(rng() * 8) + 2) * 10000;
+        const discountRate = (Math.floor(rng() * 3) + 1) * 10;
+        const correct = origPrice * (100 - discountRate) / 100;
+        const distractors = [correct - 2000, correct + 2000, origPrice].filter(v => v > 0 && v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct + distractors.length * 1000);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_prac_${seed}`, cat: '실생활', diff: 'medium',
+          q: `${origPrice.toLocaleString()}원짜리 물건을 ${discountRate}% 할인하면 얼마인가요?`,
+          opts: shuffled.map(v => v.toLocaleString() + '원'),
+          correct: shuffled.indexOf(correct),
+          exp: `${origPrice.toLocaleString()} × ${(100 - discountRate) / 100} = ${correct.toLocaleString()}원`,
+          isAuto: true
+        };
+      } else {
+        const people = Math.floor(rng() * 4) + 3;
+        const total = (Math.floor(rng() * 9) + 2) * people * 1000;
+        const perPerson = total / people;
+        const distractors = [perPerson - 1000, perPerson + 1000, total / (people + 1)].filter(v => v > 0 && v !== perPerson).slice(0, 3);
+        while (distractors.length < 3) distractors.push(perPerson + distractors.length * 500);
+        const shuffled = [perPerson, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_prac_${seed}`, cat: '실생활', diff: 'easy',
+          q: `${people}명이 식사비 ${total.toLocaleString()}원을 똑같이 나누면 1인당 얼마인가요?`,
+          opts: shuffled.map(v => v.toLocaleString() + '원'),
+          correct: shuffled.indexOf(perPerson),
+          exp: `${total.toLocaleString()} ÷ ${people} = ${perPerson.toLocaleString()}원`,
+          isAuto: true
+        };
+      }
+    }
+
+    // ----- 시간 계산 자동 생성 -----
+    function genTimeCalc(seed) {
+      const rng = seedRandom(seed + 7000);
+      const type = Math.floor(rng() * 3);
+
+      if (type === 0) {
+        const startHour = Math.floor(rng() * 10) + 1;
+        const addHours = Math.floor(rng() * 5) + 1;
+        const correct = ((startHour - 1 + addHours) % 12) + 1;
+        const d1 = correct === 1 ? 12 : correct - 1;
+        const d2 = correct >= 12 ? 1 : correct + 1;
+        const d3 = correct >= 11 ? 2 : correct + 2;
+        const shuffled = [correct, d1, d2, d3].filter((v, i, a) => a.indexOf(v) === i).slice(0, 4).sort(() => rng() - 0.5);
+        return {
+          id: `auto_time_${seed}`, cat: '시간', diff: 'easy',
+          q: `오전 ${startHour}시에서 ${addHours}시간 후는 몇 시인가요?`,
+          opts: shuffled.map(h => `${h}시`),
+          correct: shuffled.indexOf(correct),
+          exp: `${startHour} + ${addHours} = ${correct}시`,
+          isAuto: true
+        };
+      } else if (type === 1) {
+        const hours = Math.floor(rng() * 3) + 1;
+        const mins = [0, 15, 30, 45][Math.floor(rng() * 4)];
+        const correct = hours * 60 + mins;
+        const distractors = [correct - 30, correct + 30, correct - 15].filter(v => v > 0 && v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct + distractors.length * 10);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_time_${seed}`, cat: '시간', diff: 'easy',
+          q: `${hours}시간${mins > 0 ? ' ' + mins + '분' : ''}은 몇 분인가요?`,
+          opts: shuffled.map(v => v + '분'),
+          correct: shuffled.indexOf(correct),
+          exp: `${hours}시간(${hours * 60}분)${mins > 0 ? ' + ' + mins + '분' : ''} = ${correct}분`,
+          isAuto: true
+        };
+      } else {
+        const days = ['월', '화', '수', '목', '금', '토', '일'];
+        const startIdx = Math.floor(rng() * 7);
+        const addDays = Math.floor(rng() * 5) + 2;
+        const correct = days[(startIdx + addDays) % 7];
+        const opts = [
+          correct,
+          days[(startIdx + addDays + 1) % 7],
+          days[(startIdx + addDays + 2) % 7],
+          days[(startIdx + addDays - 1 + 7) % 7],
+        ].sort(() => rng() - 0.5);
+        return {
+          id: `auto_time_${seed}`, cat: '시간', diff: 'easy',
+          q: `오늘이 ${days[startIdx]}요일이면 ${addDays}일 후는 무슨 요일인가요?`,
+          opts: opts.map(d => d + '요일'),
+          correct: opts.indexOf(correct),
+          exp: `${days[startIdx]}요일에서 ${addDays}일 후 = ${correct}요일`,
+          isAuto: true
+        };
+      }
+    }
+
+    // ----- 암산 자동 생성 (덧셈/뺄셈/곱셈) -----
+    function genMentalMath(seed) {
+      const rng = seedRandom(seed + 8000);
+      const type = Math.floor(rng() * 3);
+
+      if (type === 0) {
+        const a = Math.floor(rng() * 50) + 10;
+        const b = Math.floor(rng() * 50) + 10;
+        const correct = a + b;
+        const distractors = [correct - 1, correct + 1, correct + 10].filter(v => v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct - distractors.length * 3);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_mental_${seed}`, cat: '실생활', diff: 'easy',
+          q: `${a} + ${b} = ?`,
+          opts: shuffled.map(String), correct: shuffled.indexOf(correct),
+          exp: `${a} + ${b} = ${correct}`, isAuto: true
+        };
+      } else if (type === 1) {
+        const a = Math.floor(rng() * 70) + 30;
+        const b = Math.floor(rng() * 25) + 5;
+        const correct = a - b;
+        const distractors = [correct - 1, correct + 1, correct + 10].filter(v => v > 0 && v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct + distractors.length * 2);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_mental_${seed}`, cat: '실생활', diff: 'easy',
+          q: `${a} - ${b} = ?`,
+          opts: shuffled.map(String), correct: shuffled.indexOf(correct),
+          exp: `${a} - ${b} = ${correct}`, isAuto: true
+        };
+      } else {
+        const a = Math.floor(rng() * 8) + 2;
+        const b = Math.floor(rng() * 15) + 5;
+        const correct = a * b;
+        const distractors = [correct - a, correct + a, correct + b].filter(v => v !== correct).slice(0, 3);
+        while (distractors.length < 3) distractors.push(correct + distractors.length * 3);
+        const shuffled = [correct, ...distractors].sort(() => rng() - 0.5);
+        return {
+          id: `auto_mental_${seed}`, cat: '실생활', diff: 'medium',
+          q: `${a} × ${b} = ?`,
+          opts: shuffled.map(String), correct: shuffled.indexOf(correct),
+          exp: `${a} × ${b} = ${correct}`, isAuto: true
+        };
+      }
     }
 
     // =====================================================
@@ -2075,17 +2221,19 @@
       const curated = { ...curatedPool[curatedIdx] };
   
       // === 알고리즘 2개 생성 ===
-      // 5가지 알고리즘 중 day에 따라 2개 선택
+      // 7가지 알고리즘 중 day에 따라 2개 선택
       const generators = [
         genArithmetic,
         genGeometric,
         genComparison,
         genVisualPattern,
-        genPracticalMath
+        genPracticalMath,
+        genTimeCalc,
+        genMentalMath
       ];
-  
+
       const algoIdx1 = day % generators.length;
-      const algoIdx2 = (day + 2) % generators.length;
+      const algoIdx2 = (day + 3) % generators.length;
   
       const auto1 = generators[algoIdx1](day * 100 + 1);
       const auto2 = generators[algoIdx2](day * 100 + 2);
@@ -2097,19 +2245,20 @@
     // 뇌 훈련 자동 생성 (매일 다른 게임)
     // =====================================================
 
-    // 기억력: 무작위 5자리 숫자
+    // 기억력: day가 늘수록 자릿수 증가 (5→6→7자리)
     function genMemoryGame(day) {
       const rng = seedRandom(day + 5000);
+      const count = day <= 30 ? 5 : day <= 90 ? 6 : 7;
       const numbers = [];
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < count; i++) {
         numbers.push(Math.floor(rng() * 10));
       }
       return {
         id: `mem_${day}`,
         type: '숫자 기억',
-        instruction: '5초 동안 보여지는 숫자를 순서대로 기억하세요',
+        instruction: `${count}초 동안 보여지는 숫자를 순서대로 기억하세요`,
         numbers,
-        showTime: 5000
+        showTime: count * 1000
       };
     }
 
@@ -2118,15 +2267,35 @@
       const rng = seedRandom(day + 6000);
       const wordPairs = [
         { original: '오늘하늘이참맑네요', changed: '오늘하늘이참막네요', diff: '맑 → 막' },
-        { original: '봄여름가을겨울사계절', changed: '봄여름가을겨을사계절', diff: '겨울 → 겨을' },
-        { original: '책상위에연필이있어요', changed: '책상위에연팔이있어요', diff: '연필 → 연팔' },
-        { original: '아침에커피한잔어때요', changed: '아침에커피한잔어떼요', diff: '어때 → 어떼' },
-        { original: '공원산책이건강에좋아', changed: '공원산책이건간에좋아', diff: '건강 → 건간' },
-        { original: '손자손녀와함께시간보내', changed: '손자손너와함께시간보내', diff: '손녀 → 손너' },
+        { original: '봄여름가을겨울사계절', changed: '봄여름가을겨을사계절', diff: '울 → 을' },
+        { original: '책상위에연필이있어요', changed: '책상위에연팔이있어요', diff: '필 → 팔' },
+        { original: '아침에커피한잔어때요', changed: '아침에커피한잔어떼요', diff: '때 → 떼' },
+        { original: '공원산책이건강에좋아', changed: '공원산책이건간에좋아', diff: '강 → 간' },
+        { original: '손자손녀와함께시간보내', changed: '손자손너와함께시간보내', diff: '녀 → 너' },
         { original: '바람이부는날씨좋아요', changed: '바람이부는날씨좋아오', diff: '요 → 오' },
         { original: '맛있는음식을먹으니행복', changed: '맛있는음식을먹으니행북', diff: '복 → 북' },
         { original: '도서관에서책을빌렸어요', changed: '도서간에서책을빌렸어요', diff: '관 → 간' },
-        { original: '친구들과만나서반가워요', changed: '친구들과만나서반가위요', diff: '워 → 위' }
+        { original: '친구들과만나서반가워요', changed: '친구들과만나서반가위요', diff: '워 → 위' },
+        { original: '가족모두모여서밥먹어요', changed: '가족모두모여서발먹어요', diff: '밥 → 발' },
+        { original: '텔레비전뉴스보는시간이', changed: '텔레비전뉴수보는시간이', diff: '스 → 수' },
+        { original: '어머니표김치찌개맛있어', changed: '어머니표김치찌게맛있어', diff: '개 → 게' },
+        { original: '할머니댁에서윷놀이해요', changed: '할머니댁에서율놀이해요', diff: '윷 → 율' },
+        { original: '시장에서장보기즐거워요', changed: '시장에서장보기즐거와요', diff: '워 → 와' },
+        { original: '이른아침새소리들려요', changed: '이른아침새소리드려요', diff: '들 → 드' },
+        { original: '강아지꼬리흔들며뛰어요', changed: '강아지고리흔들며뛰어요', diff: '꼬 → 고' },
+        { original: '점심에비빔밥먹었어요', changed: '점심에비빔밥믹었어요', diff: '먹 → 믹' },
+        { original: '운동후시원한물한잔마셔', changed: '운동후시원한물한산마셔', diff: '잔 → 산' },
+        { original: '하루에사과한개먹어요', changed: '하루에사과한기먹어요', diff: '개 → 기' },
+        { original: '창밖에비가내리고있어요', changed: '창밖에비가내리고잇어요', diff: '있 → 잇' },
+        { original: '여행을가고싶은날이에요', changed: '여행을가고십은날이에요', diff: '싶 → 십' },
+        { original: '형제자매사이좋게지내요', changed: '형제자메사이좋게지내요', diff: '매 → 메' },
+        { original: '봄나들이가족소풍날이야', changed: '봄나들이가족소풍날이아', diff: '야 → 아' },
+        { original: '화창한날씨에기분좋아요', changed: '화창한날씨에기분좋와요', diff: '아 → 와' },
+        { original: '냇가에서물소리들어봐요', changed: '냇가에서물소리들어봬요', diff: '봐 → 봬' },
+        { original: '산에서맑은공기마시고싶어', changed: '산에서막은공기마시고싶어', diff: '맑 → 막' },
+        { original: '저녁하늘노을이아름다워', changed: '저녁하늘노을이아릅다워', diff: '름 → 릅' },
+        { original: '오리가연못에서헤엄쳐요', changed: '오리가연못에서헤엄처요', diff: '쳐 → 처' },
+        { original: '주말에손녀와함께놀아요', changed: '주말에손녀와함께놀와요', diff: '아 → 와' },
       ];
       const pair = wordPairs[day % wordPairs.length];
   
@@ -3196,6 +3365,15 @@
     
     // ==================== 초기 렌더링 ====================
     render();
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && state.currentPage === 'language') {
+        const todayStr = getTodayString();
+        if (state.cachedNewsDate !== todayStr) {
+          render();
+        }
+      }
+    });
     
 
   </script>
